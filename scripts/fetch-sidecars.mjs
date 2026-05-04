@@ -9,6 +9,8 @@
  *
  * En el bundle final Tauri suele publicar los binarios como `ffmpeg`, `ffprobe`, `yt-dlp`
  * (no como `ffmpeg-<triple>`); la verificación acepta ambas formas.
+ * En Windows los sidecars suelen quedar en `target/release/*.exe` junto al exe principal;
+ * el árbol `bundle/` contiene sobre todo el instalador, sin esos binarios sueltos.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -151,15 +153,45 @@ function walkFiles(dir, acc = []) {
   return acc
 }
 
-function resolveBundleRoot() {
+function resolveCargoReleaseSubdir(sub) {
   const candidates = []
   const cargoTarget = process.env.CARGO_TARGET_DIR
-  if (cargoTarget) candidates.push(path.join(cargoTarget, 'release', 'bundle'))
-  candidates.push(path.join(root, 'src-tauri', 'target', 'release', 'bundle'))
+  if (cargoTarget) candidates.push(path.join(cargoTarget, 'release', sub))
+  candidates.push(path.join(root, 'src-tauri', 'target', 'release', sub))
   for (const p of candidates) {
     if (fs.existsSync(p)) return p
   }
   return null
+}
+
+function resolveBundleRoot() {
+  return resolveCargoReleaseSubdir('bundle')
+}
+
+/** Directorio `target/release` (donde Tauri deja los externalBin en Windows). */
+function resolveReleaseDir() {
+  const candidates = []
+  const cargoTarget = process.env.CARGO_TARGET_DIR
+  if (cargoTarget) candidates.push(path.join(cargoTarget, 'release'))
+  candidates.push(path.join(root, 'src-tauri', 'target', 'release'))
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p
+  }
+  return null
+}
+
+/** Basenames bajo `bundle/` (recursivo) y archivos sueltos en `target/release/` (solo nivel superior). */
+function collectSidecarCandidateBasenames(bundleRoot, releaseDir) {
+  const basenames = new Set()
+  if (bundleRoot && fs.existsSync(bundleRoot)) {
+    for (const p of walkFiles(bundleRoot)) basenames.add(path.basename(p))
+  }
+  if (releaseDir && fs.existsSync(releaseDir)) {
+    for (const ent of fs.readdirSync(releaseDir, { withFileTypes: true })) {
+      if (ent.isFile()) basenames.add(ent.name)
+    }
+  }
+  return [...basenames]
 }
 
 /** Coincide con bin en src-tauri/bin/ (`ffmpeg-aarch64-apple-darwin`) o con copia en bundle (`ffmpeg`, `ffmpeg.exe`). */
@@ -173,27 +205,29 @@ function bundleHasSidecarBasename(basenames, stem) {
 
 async function verifyBundle() {
   const bundleRoot = resolveBundleRoot()
-  if (!bundleRoot) {
+  const releaseDir = resolveReleaseDir()
+  if (!bundleRoot && !releaseDir) {
     console.error(
-      'No existe release/bundle. Ejecuta antes `npm run tauri build`. ' +
-        'Si usas CARGO_TARGET_DIR, el bundle debe estar en $CARGO_TARGET_DIR/release/bundle.'
+      'No existe target/release ni release/bundle. Ejecuta antes `npm run tauri build`. ' +
+        'Si usas CARGO_TARGET_DIR, revisa $CARGO_TARGET_DIR/release.'
     )
     process.exit(1)
   }
-  const files = walkFiles(bundleRoot)
-  const basenames = files.map((p) => path.basename(p))
+  const basenames = collectSidecarCandidateBasenames(bundleRoot, releaseDir)
   const ffmpegOk = bundleHasSidecarBasename(basenames, 'ffmpeg')
   const ffprobeOk = bundleHasSidecarBasename(basenames, 'ffprobe')
   const ytdlpOk = bundleHasSidecarBasename(basenames, 'yt-dlp')
   if (!ffmpegOk || !ffprobeOk || !ytdlpOk) {
     const sample = basenames.filter((n) => /ffmpeg|ffprobe|yt-dlp/i.test(n)).slice(0, 30)
     console.error(
-      'Verificación bundle: faltan sidecars ffmpeg / ffprobe / yt-dlp bajo release/bundle.',
-      { bundleRoot, ffmpegOk, ffprobeOk, ytdlpOk, sample }
+      'Verificación: faltan sidecars ffmpeg / ffprobe / yt-dlp (se busca en release/bundle y en archivos de target/release/).',
+      { bundleRoot: bundleRoot ?? null, releaseDir: releaseDir ?? null, ffmpegOk, ffprobeOk, ytdlpOk, sample }
     )
     process.exit(1)
   }
-  console.log(`Verificación bundle OK (${bundleRoot}): ffmpeg, ffprobe y yt-dlp presentes.`)
+  console.log(
+    `Verificación OK: ffmpeg, ffprobe y yt-dlp encontrados (bundle: ${bundleRoot ?? '—'}, release: ${releaseDir ?? '—'}).`
+  )
 }
 
 async function main() {
