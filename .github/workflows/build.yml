@@ -3,6 +3,11 @@
 
 name: Desktop (Tauri)
 
+# Acciones que aún usan Node 20 internamente: opt-in a Node 24 (recomendado por GitHub hasta migrar todo).
+# https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [main]
@@ -32,12 +37,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Rust
@@ -73,7 +78,7 @@ jobs:
         run: node scripts/fetch-sidecars.mjs --verify-bundle
 
       - name: Upload installer artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: music-app-${{ matrix.label }}
           path: src-tauri/target/release/bundle
@@ -89,7 +94,7 @@ jobs:
 
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-assets
           pattern: music-app-*
