@@ -15,7 +15,7 @@ import {
   type YtdlpDumpRoot
 } from './create-playlist.builder'
 import { resolvePlaylistPathsFromConfigDir } from './playlist-config.service'
-import { cookiesArgsForYtdlp, spawnYtdlpCollectStdout } from './ytdlp.service'
+import { spawnYtdlpCollectStdout, ytDlpPreambleArgs } from './ytdlp.service'
 import { enqueueResolvedPlaylist, startSerialDownloads } from './downloads.service'
 
 function buildDumpArgs(url: string): string[] {
@@ -44,8 +44,8 @@ export async function loadYoutubePlaylistIntoDraft(): Promise<void> {
   playlistDraftStore.update((s) => ({ ...s, loading: true, error: null }))
 
   try {
-    const cookieArg = await cookiesArgsForYtdlp(getDownloadsState().ytdlpCookiesPath)
-    const stdout = await spawnYtdlpCollectStdout([...cookieArg, ...buildDumpArgs(url)])
+    const preamble = await ytDlpPreambleArgs(getDownloadsState().ytdlpCookiesPath)
+    const stdout = await spawnYtdlpCollectStdout([...preamble, ...buildDumpArgs(url)])
     let root: YtdlpDumpRoot
     try {
       root = JSON.parse(stdout) as YtdlpDumpRoot

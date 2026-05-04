@@ -281,7 +281,14 @@
                   href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
                   target="_blank"
                   rel="noopener noreferrer">yt-dlp — cookies</a
-                >.
+                >. Los retos JavaScript de YouTube requieren
+                <a
+                  class="field-hint-link"
+                  href="https://github.com/yt-dlp/yt-dlp/wiki/EJS"
+                  target="_blank"
+                  rel="noopener noreferrer">Deno (EJS)</a
+                >: la app lo empaqueta si ejecutas <code class="field-hint-code">npm run fetch-sidecars</code> antes del
+                build (o usas el workflow de CI).
               </p>
               <div class="cookies-row">
                 <span
@@ -762,6 +769,14 @@
 
   .field-hint-link:hover {
     color: #1d4ed8;
+  }
+
+  .field-hint-code {
+    font-size: 0.72rem;
+    font-family: ui-monospace, monospace;
+    background: #f3f4f6;
+    padding: 0.1em 0.35em;
+    border-radius: 0.25rem;
   }
 
   .cookies-row {

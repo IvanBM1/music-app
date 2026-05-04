@@ -7,7 +7,7 @@ import { youtubeSingleVideoUrl } from '../lib/youtube-url'
 import { resolveBundledFfmpegDirectory } from './ffmpeg.service'
 import {
   buildYtdlpAudioArgs,
-  cookiesArgsForYtdlp,
+  ytDlpPreambleArgs,
   spawnYtdlp,
   type YtdlpRunHandle
 } from './ytdlp.service'
@@ -129,8 +129,8 @@ async function runSingleTask(task: DownloadTask, outDir: string, ffmpegDir: stri
   const mp3Path = await join(outDir, task.fileName)
   const targetPath = mp3Path
   const outputTpl = `${targetPath.replace(/\.mp3$/i, '')}.%(ext)s`
-  const cookieArg = await cookiesArgsForYtdlp(getDownloadsState().ytdlpCookiesPath)
-  const args = buildYtdlpAudioArgs(ffmpegDir, outputTpl, url, cookieArg)
+  const preamble = await ytDlpPreambleArgs(getDownloadsState().ytdlpCookiesPath)
+  const args = buildYtdlpAudioArgs(ffmpegDir, outputTpl, url, preamble)
 
   patchDownloadTask(task.id, {
     status: 'running',

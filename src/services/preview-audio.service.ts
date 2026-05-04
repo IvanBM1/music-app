@@ -7,7 +7,7 @@ import { getDownloadsState } from '../stores/downloads.store'
 import { closeYoutubeEmbed } from '../stores/preview-embed.store'
 import { appendStructuredLog } from '../stores/downloads.store'
 import { resolveBundledFfmpegDirectory } from './ffmpeg.service'
-import { buildYtdlpPreviewAudioArgs, cookiesArgsForYtdlp, YTDLP_SIDECAR } from './ytdlp.service'
+import { buildYtdlpPreviewAudioArgs, YTDLP_SIDECAR, ytDlpPreambleArgs } from './ytdlp.service'
 
 export const previewPlaybackStore = writable({
   loading: false,
@@ -77,8 +77,8 @@ export async function playYoutubePreviewLocal(sourceUrl: string): Promise<void> 
     const base = await join(previewDir, `preview-${crypto.randomUUID()}`)
     const tpl = `${base}.%(ext)s`
     const ffmpegDir = await resolveBundledFfmpegDirectory()
-    const cookieArg = await cookiesArgsForYtdlp(getDownloadsState().ytdlpCookiesPath)
-    const args = buildYtdlpPreviewAudioArgs(ffmpegDir, tpl, url, cookieArg)
+    const preamble = await ytDlpPreambleArgs(getDownloadsState().ytdlpCookiesPath)
+    const args = buildYtdlpPreviewAudioArgs(ffmpegDir, tpl, url, preamble)
 
     const result = await Command.sidecar(YTDLP_SIDECAR, args).execute()
     if (result.code !== 0) {

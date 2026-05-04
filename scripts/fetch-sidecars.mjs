@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Descarga ffmpeg, ffprobe y yt-dlp con los nombres que espera Tauri 2 (`externalBin`).
+ * Descarga ffmpeg, ffprobe, yt-dlp y Deno (runtime EJS para YouTube) con los nombres que espera Tauri 2 (`externalBin`).
  * Usa el triple de `rustc -vV` (coincide con el sufijo del host de build en CI).
  *
  * Uso:
@@ -81,6 +81,46 @@ async function chmod755(p) {
   await fsp.chmod(p, 0o755)
 }
 
+const GH_JSON_HEADERS = {
+  Accept: 'application/vnd.github+json',
+  'User-Agent': 'music-app-fetch-sidecars/1'
+}
+
+async function denoZipDownloadUrl(assetName) {
+  const res = await fetch('https://api.github.com/repos/denoland/deno/releases/latest', {
+    headers: GH_JSON_HEADERS
+  })
+  if (!res.ok) throw new Error(`GitHub API (deno): HTTP ${res.status}`)
+  const data = await res.json()
+  const asset = data.assets?.find((a) => a.name === assetName)
+  if (!asset?.browser_download_url) {
+    throw new Error(`No hay asset «${assetName}» en la última release de Deno`)
+  }
+  return asset.browser_download_url
+}
+
+/** Deno ≥2: yt-dlp lo usa para retos JavaScript (EJS) de YouTube. */
+async function fetchDenoForTriple(triple) {
+  const assetName = `deno-${triple}.zip`
+  const url = await denoZipDownloadUrl(assetName)
+  const tmpRoot = path.join(root, 'node_modules', '.sidecars-tmp')
+  fs.mkdirSync(tmpRoot, { recursive: true })
+  const zipPath = path.join(tmpRoot, `deno-${triple}.zip`)
+  await fetchToFile(url, zipPath)
+  const extractDir = path.join(tmpRoot, `deno-extract-${triple}`)
+  fs.rmSync(extractDir, { recursive: true, force: true })
+  fs.mkdirSync(extractDir, { recursive: true })
+  extractZip(zipPath, extractDir)
+  const inner = triple.includes('windows') ? 'deno.exe' : 'deno'
+  const found = findFileRecursive(extractDir, inner)
+  await fsp.mkdir(binDir, { recursive: true })
+  const destName = triple.includes('windows') ? `deno-${triple}.exe` : `deno-${triple}`
+  const dest = path.join(binDir, destName)
+  await fsp.copyFile(found, dest)
+  await chmod755(dest)
+  console.log(`Deno listo: ${destName}`)
+}
+
 async function fetchWindows(triple) {
   const tmpRoot = path.join(root, 'node_modules', '.sidecars-tmp')
   fs.mkdirSync(tmpRoot, { recursive: true })
@@ -105,6 +145,7 @@ async function fetchWindows(triple) {
     'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe',
     path.join(binDir, `yt-dlp-${triple}.exe`)
   )
+  await fetchDenoForTriple(triple)
   console.log(`Sidecars Windows listos (${triple}) en ${binDir}`)
 }
 
@@ -138,6 +179,7 @@ async function fetchMacos(triple) {
       path.join(binDir, `yt-dlp-${triple}`)
     )
     await chmod755(path.join(binDir, `yt-dlp-${triple}`))
+    await fetchDenoForTriple(triple)
     console.log(`Sidecars macOS listos (${triple}) en ${binDir}`)
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })

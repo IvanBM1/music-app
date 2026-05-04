@@ -1,6 +1,7 @@
 import { Command } from '@tauri-apps/plugin-shell'
 import { exists } from '@tauri-apps/plugin-fs'
 import type { YtdlpExitInfo } from '../lib/types/downloads.types'
+import { resolveBundledDenoForYtdlp } from './ffmpeg.service'
 
 export const YTDLP_SIDECAR = 'bin/yt-dlp' as const
 
@@ -49,9 +50,19 @@ export async function cookiesArgsForYtdlp(cookiesPath: string | null | undefined
   return []
 }
 
+/** Cookies + runtime JS (Deno) y scripts EJS para YouTube (retos «n» / EJS). */
+export async function ytDlpPreambleArgs(cookiesPath: string | null | undefined): Promise<string[]> {
+  const parts = [...(await cookiesArgsForYtdlp(cookiesPath))]
+  const denoPath = await resolveBundledDenoForYtdlp()
+  if (denoPath) {
+    parts.push('--js-runtimes', `deno:${denoPath}`, '--remote-components', 'ejs:github')
+  }
+  return parts
+}
+
 /**
  * Construye argumentos con flags recomendados para audio MP3 embebido.
- * @param leadingExtras p. ej. resultado de `await cookiesArgsForYtdlp(...)` (debe ir tras `--ffmpeg-location`).
+ * @param leadingExtras p. ej. `await ytDlpPreambleArgs(...)` (cookies + Deno/EJS; va tras `--ffmpeg-location`).
  */
 export function buildYtdlpAudioArgs(
   ffmpegDir: string,
