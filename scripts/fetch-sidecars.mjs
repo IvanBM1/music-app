@@ -6,6 +6,9 @@
  * Uso:
  *   node scripts/fetch-sidecars.mjs
  *   node scripts/fetch-sidecars.mjs --verify-bundle   # tras `npm run tauri build`
+ *
+ * En el bundle final Tauri suele publicar los binarios como `ffmpeg`, `ffprobe`, `yt-dlp`
+ * (no como `ffmpeg-<triple>`); la verificación acepta ambas formas.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -128,26 +131,49 @@ function walkFiles(dir, acc = []) {
   return acc
 }
 
+function resolveBundleRoot() {
+  const candidates = []
+  const cargoTarget = process.env.CARGO_TARGET_DIR
+  if (cargoTarget) candidates.push(path.join(cargoTarget, 'release', 'bundle'))
+  candidates.push(path.join(root, 'src-tauri', 'target', 'release', 'bundle'))
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p
+  }
+  return null
+}
+
+/** Coincide con bin en src-tauri/bin/ (`ffmpeg-aarch64-apple-darwin`) o con copia en bundle (`ffmpeg`, `ffmpeg.exe`). */
+function bundleHasSidecarBasename(basenames, stem) {
+  return basenames.some((n) => {
+    if (n === stem || n === `${stem}.exe`) return true
+    if (n.startsWith(`${stem}-`)) return true
+    return false
+  })
+}
+
 async function verifyBundle() {
-  const bundleRoot = path.join(root, 'src-tauri', 'target', 'release', 'bundle')
-  if (!fs.existsSync(bundleRoot)) {
-    console.error(`No existe ${bundleRoot}. Ejecuta antes: npm run tauri build`)
+  const bundleRoot = resolveBundleRoot()
+  if (!bundleRoot) {
+    console.error(
+      'No existe release/bundle. Ejecuta antes `npm run tauri build`. ' +
+        'Si usas CARGO_TARGET_DIR, el bundle debe estar en $CARGO_TARGET_DIR/release/bundle.'
+    )
     process.exit(1)
   }
   const files = walkFiles(bundleRoot)
   const basenames = files.map((p) => path.basename(p))
-  const has = (re) => basenames.some((n) => re.test(n))
-  const ffmpegOk = has(/^ffmpeg-/)
-  const ffprobeOk = has(/^ffprobe-/)
-  const ytdlpOk = has(/^yt-dlp-/)
+  const ffmpegOk = bundleHasSidecarBasename(basenames, 'ffmpeg')
+  const ffprobeOk = bundleHasSidecarBasename(basenames, 'ffprobe')
+  const ytdlpOk = bundleHasSidecarBasename(basenames, 'yt-dlp')
   if (!ffmpegOk || !ffprobeOk || !ytdlpOk) {
+    const sample = basenames.filter((n) => /ffmpeg|ffprobe|yt-dlp/i.test(n)).slice(0, 30)
     console.error(
-      'Verificación bundle: no se encontraron prefijos ffmpeg- / ffprobe- / yt-dlp- bajo release/bundle.',
-      { ffmpegOk, ffprobeOk, ytdlpOk, sample: basenames.filter((n) => /ffmpeg|ffprobe|yt-dlp/i.test(n)).slice(0, 20) }
+      'Verificación bundle: faltan sidecars ffmpeg / ffprobe / yt-dlp bajo release/bundle.',
+      { bundleRoot, ffmpegOk, ffprobeOk, ytdlpOk, sample }
     )
     process.exit(1)
   }
-  console.log('Verificación bundle: los sidecars aparecen en el árbol de release/bundle.')
+  console.log(`Verificación bundle OK (${bundleRoot}): ffmpeg, ffprobe y yt-dlp presentes.`)
 }
 
 async function main() {
