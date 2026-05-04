@@ -36,9 +36,29 @@ async function fetchToFile(url, dest) {
   await fsp.writeFile(dest, buf)
 }
 
-function extractZipWithTar(zipPath, outDir) {
+/** PowerShell comilla simple: duplicar comillas internas. */
+function pwshLiteralSingleQuoted(fsPath) {
+  return `'${String(fsPath).replace(/'/g, "''")}'`
+}
+
+/**
+ * Descomprime .zip. En Windows el `tar` integrado suele fallar (exit 128) con ZIPs grandes tipo BtbN;
+ * usamos Expand-Archive. En macOS/Linux usamos tar.
+ */
+function extractZip(zipPath, outDir) {
   fs.mkdirSync(outDir, { recursive: true })
-  execFileSync('tar', ['-xf', zipPath, '-C', outDir], { stdio: 'inherit' })
+  if (process.platform === 'win32') {
+    const zip = path.resolve(zipPath)
+    const dest = path.resolve(outDir)
+    const cmd = `Expand-Archive -LiteralPath ${pwshLiteralSingleQuoted(zip)} -DestinationPath ${pwshLiteralSingleQuoted(dest)} -Force`
+    execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cmd],
+      { stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 }
+    )
+  } else {
+    execFileSync('tar', ['-xf', zipPath, '-C', outDir], { stdio: 'inherit' })
+  }
 }
 
 function findFileRecursive(rootDir, filename) {
@@ -72,7 +92,7 @@ async function fetchWindows(triple) {
   const extractDir = path.join(tmpRoot, 'ffmpeg-extracted')
   fs.rmSync(extractDir, { recursive: true, force: true })
   fs.mkdirSync(extractDir, { recursive: true })
-  extractZipWithTar(zipPath, extractDir)
+  extractZip(zipPath, extractDir)
 
   const ffmpegPath = findFileRecursive(extractDir, 'ffmpeg.exe')
   const ffprobePath = findFileRecursive(extractDir, 'ffprobe.exe')
@@ -97,8 +117,8 @@ async function fetchMacos(triple) {
     const fpOut = path.join(tmp, 'fp')
     fs.mkdirSync(ffOut, { recursive: true })
     fs.mkdirSync(fpOut, { recursive: true })
-    extractZipWithTar(ffZip, ffOut)
-    extractZipWithTar(fpZip, fpOut)
+    extractZip(ffZip, ffOut)
+    extractZip(fpZip, fpOut)
 
     const ffmpegBin = path.join(ffOut, 'ffmpeg')
     const ffprobeBin = path.join(fpOut, 'ffprobe')
