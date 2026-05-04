@@ -41,6 +41,8 @@ export interface DownloadTask {
 export interface YtdlpExitInfo {
   code: number | null
   signal: number | null
+  /** Últimas líneas de stderr (donde yt-dlp suele explicar el fallo). */
+  stderrTail?: string
 }
 
 /** Entrada mínima para crear tareas (sin id ni timestamps). */

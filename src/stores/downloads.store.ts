@@ -7,6 +7,11 @@ const MAX_LOG_LINES = 2500
 export interface DownloadsStoreState {
   /** Directorio absoluto de salida; `null` = usar default del servicio. */
   outputDir: string | null
+  /**
+   * Ruta absoluta a cookies Netscape para YouTube (exportadas desde el navegador).
+   * Mitiga «Sign in to confirm you're not a bot» en yt-dlp.
+   */
+  ytdlpCookiesPath: string | null
   tasks: DownloadTask[]
   activeTaskId: string | null
   isProcessing: boolean
@@ -15,6 +20,7 @@ export interface DownloadsStoreState {
 
 const initialState: DownloadsStoreState = {
   outputDir: null,
+  ytdlpCookiesPath: null,
   tasks: [],
   activeTaskId: null,
   isProcessing: false,
@@ -55,6 +61,10 @@ export function getDownloadsState(): DownloadsStoreState {
 
 export function setDownloadsOutputDir(path: string | null): void {
   downloadsStore.update((s) => ({ ...s, outputDir: path }))
+}
+
+export function setYtdlpCookiesPath(path: string | null): void {
+  downloadsStore.update((s) => ({ ...s, ytdlpCookiesPath: path?.trim() ? path.trim() : null }))
 }
 
 export function setDownloadsProcessing(active: boolean): void {

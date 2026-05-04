@@ -1,11 +1,17 @@
 import { open } from '@tauri-apps/plugin-dialog'
 import { downloadDir, join } from '@tauri-apps/api/path'
 import { exists, readTextFile } from '@tauri-apps/plugin-fs'
-import type { DownloadTask, DownloadTaskInput } from '../lib/types/downloads.types'
+import type { DownloadTask, DownloadTaskInput, YtdlpExitInfo } from '../lib/types/downloads.types'
 import type { PlaylistRunState } from '../lib/types/playlist.types'
 import { youtubeSingleVideoUrl } from '../lib/youtube-url'
 import { resolveBundledFfmpegDirectory } from './ffmpeg.service'
-import { buildYtdlpAudioArgs, spawnYtdlp, type YtdlpRunHandle } from './ytdlp.service'
+import {
+  buildYtdlpAudioArgs,
+  cookiesArgsForYtdlp,
+  spawnYtdlp,
+  type YtdlpRunHandle
+} from './ytdlp.service'
+import { persistYtdlpCookiesPath } from './downloads-persistence.service'
 import { parseYtdlpDownloadLine } from './ytdlp-progress.parser'
 import { applyId3TagsToTaskFile } from './id3-tags.service'
 import { safePlaylistDirName } from '../lib/safe-playlist-dir-name'
@@ -52,6 +58,12 @@ function ingestStreamLine(taskId: string, line: string, stream: 'stdout' | 'stde
   if (parsed) {
     patchDownloadTask(taskId, { progress: parsed })
   }
+}
+
+function formatYtdlpTaskFailure(exit: YtdlpExitInfo): string {
+  const tail = exit.stderrTail?.trim()
+  if (tail) return tail.length > 2000 ? `…${tail.slice(-2000)}` : tail
+  return `Código salida ${exit.code}, señal ${exit.signal}`
 }
 
 function taskQueueIndex(taskId: string): number {
@@ -117,7 +129,8 @@ async function runSingleTask(task: DownloadTask, outDir: string, ffmpegDir: stri
   const mp3Path = await join(outDir, task.fileName)
   const targetPath = mp3Path
   const outputTpl = `${targetPath.replace(/\.mp3$/i, '')}.%(ext)s`
-  const args = buildYtdlpAudioArgs(ffmpegDir, outputTpl, url)
+  const cookieArg = await cookiesArgsForYtdlp(getDownloadsState().ytdlpCookiesPath)
+  const args = buildYtdlpAudioArgs(ffmpegDir, outputTpl, url, cookieArg)
 
   patchDownloadTask(task.id, {
     status: 'running',
@@ -171,7 +184,7 @@ async function runSingleTask(task: DownloadTask, outDir: string, ffmpegDir: stri
 
       const ok = exit.code === 0
       if (!ok) {
-        const errMsg = `Código salida ${exit.code}, señal ${exit.signal}`
+        const errMsg = formatYtdlpTaskFailure(exit)
         patchDownloadTask(task.id, {
           status: 'failed',
           error: errMsg,
@@ -373,4 +386,26 @@ export async function pickDownloadsOutputDirectory(): Promise<boolean> {
   setDownloadsOutputDir(picked.trim())
   appendStructuredLog('paths', `outputDir=${picked.trim()}`)
   return true
+}
+
+/**
+ * Archivo Netscape de cookies para YouTube (ver wiki yt-dlp).
+ * Devuelve `false` si el usuario cancela.
+ */
+export async function pickYtdlpCookiesFile(): Promise<boolean> {
+  const picked = await open({
+    title: 'Cookies de YouTube (archivo .txt, formato Netscape)',
+    multiple: false,
+    directory: false,
+    filters: [{ name: 'Texto', extensions: ['txt'] }]
+  })
+  if (typeof picked !== 'string' || !picked.trim()) return false
+  await persistYtdlpCookiesPath(picked.trim())
+  appendStructuredLog('paths', `ytdlpCookies=${picked.trim()}`)
+  return true
+}
+
+export async function clearYtdlpCookiesFile(): Promise<void> {
+  await persistYtdlpCookiesPath(null)
+  appendStructuredLog('paths', 'ytdlpCookies (vacío)')
 }

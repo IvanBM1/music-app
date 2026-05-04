@@ -45,3 +45,28 @@ export function youtubeVideoId(url: string): string {
   }
   return ''
 }
+
+/**
+ * Origen que YouTube acepta en el parámetro `origin` del embed (mitiga error 153 en WKWebView / Tauri).
+ */
+function youtubeEmbedOriginParam(): string {
+  if (typeof window === 'undefined') return 'https://www.youtube.com'
+  const o = window.location?.origin ?? ''
+  if (o.startsWith('https://')) return o
+  // http://localhost (dev), tauri://, asset://, etc.
+  return 'https://www.youtube.com'
+}
+
+/** URL del iframe del reproductor embebido (referrer + origin para compatibilidad con WebView). */
+export function youtubeEmbedPlayerUrl(videoId: string): string {
+  const id = encodeURIComponent(videoId)
+  const p = new URLSearchParams({
+    autoplay: '1',
+    playsinline: '1',
+    rel: '0',
+    enablejsapi: '1',
+    modestbranding: '1',
+    origin: youtubeEmbedOriginParam()
+  })
+  return `https://www.youtube.com/embed/${id}?${p.toString()}`
+}

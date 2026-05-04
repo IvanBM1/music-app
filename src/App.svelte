@@ -6,7 +6,11 @@
     playlistDraftStore,
     removeDraftTrackById
   } from './stores/playlist-draft.store'
-  import { requestCancelDownloads } from './services/downloads.service'
+  import {
+    clearYtdlpCookiesFile,
+    pickYtdlpCookiesFile,
+    requestCancelDownloads
+  } from './services/downloads.service'
   import {
     downloadPlaylistFromDraft,
     loadYoutubePlaylistIntoDraft,
@@ -18,7 +22,7 @@
     openYoutubeEmbedFromUrl,
     previewEmbedStore
   } from './stores/preview-embed.store'
-  import { youtubeVideoId } from './lib/youtube-url'
+  import { youtubeEmbedPlayerUrl, youtubeVideoId } from './lib/youtube-url'
   import Button from './components/Button.svelte'
   import ListPlus from 'lucide-svelte/icons/list-plus'
   import Download from 'lucide-svelte/icons/download'
@@ -108,6 +112,19 @@
     if (!path?.trim()) return ''
     const parts = path.replace(/\\/g, '/').split('/')
     return parts.pop() ?? path
+  }
+
+  function cookiesPathLabel(path: string | null): string {
+    if (!path?.trim()) return 'Ninguna — sin cookies de navegador'
+    return coverBasename(path)
+  }
+
+  async function pickYtdlpCookies() {
+    await pickYtdlpCookiesFile()
+  }
+
+  async function clearYtdlpCookies() {
+    await clearYtdlpCookiesFile()
   }
 
   function fetchYoutubeList() {
@@ -253,6 +270,48 @@
             />
           </label>
 
+          {#if isTauri()}
+            <div class="field">
+              <span class="field-label">Cookies de YouTube (opcional)</span>
+              <p class="field-hint">
+                Si aparece el aviso de «bot» o inicio de sesión, exporta cookies en formato Netscape y elige el
+                archivo. Guía:
+                <a
+                  class="field-hint-link"
+                  href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
+                  target="_blank"
+                  rel="noopener noreferrer">yt-dlp — cookies</a
+                >.
+              </p>
+              <div class="cookies-row">
+                <span
+                  class="cookies-path"
+                  title={$downloadsStore.ytdlpCookiesPath ?? ''}
+                >{cookiesPathLabel($downloadsStore.ytdlpCookiesPath)}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onclick={() => void pickYtdlpCookies()}
+                  disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
+                >
+                  Elegir archivo…
+                </Button>
+                {#if $downloadsStore.ytdlpCookiesPath}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onclick={() => void clearYtdlpCookies()}
+                    disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
+                  >
+                    Quitar
+                  </Button>
+                {/if}
+              </div>
+            </div>
+          {/if}
+
           <Button
             variant="outline"
             class="action-full"
@@ -394,11 +453,11 @@
               {#key $previewEmbedStore.videoId}
                 <div class="preview-ratio">
                   <iframe
-                    src="https://www.youtube.com/embed/{$previewEmbedStore.videoId}?autoplay=1&playsinline=1&rel=0"
+                    src={youtubeEmbedPlayerUrl($previewEmbedStore.videoId)}
                     title="Vista previa de YouTube"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                     allowfullscreen
-                    loading="lazy"
+                    referrerpolicy="strict-origin-when-cross-origin"
                   ></iframe>
                 </div>
               {/key}
@@ -686,6 +745,38 @@
   .field-input:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+
+  .field-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: #6b7280;
+  }
+
+  .field-hint-link {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .field-hint-link:hover {
+    color: #1d4ed8;
+  }
+
+  .cookies-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .cookies-path {
+    flex: 1 1 8rem;
+    min-width: 0;
+    font-size: 0.75rem;
+    color: #4b5563;
+    word-break: break-all;
   }
 
   .cover-drop {

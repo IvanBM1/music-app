@@ -1,7 +1,11 @@
 import { get } from 'svelte/store'
 import { open } from '@tauri-apps/plugin-dialog'
 import { downloadDir, join } from '@tauri-apps/api/path'
-import { appendStructuredLog, replaceDownloadTasks } from '../stores/downloads.store'
+import {
+  appendStructuredLog,
+  getDownloadsState,
+  replaceDownloadTasks
+} from '../stores/downloads.store'
 import type { PlaylistJsonRoot, PlaylistTrack } from '../lib/types/playlist.types'
 import { playlistDraftStore, type DraftTrack } from '../stores/playlist-draft.store'
 import {
@@ -11,7 +15,7 @@ import {
   type YtdlpDumpRoot
 } from './create-playlist.builder'
 import { resolvePlaylistPathsFromConfigDir } from './playlist-config.service'
-import { spawnYtdlpCollectStdout } from './ytdlp.service'
+import { cookiesArgsForYtdlp, spawnYtdlpCollectStdout } from './ytdlp.service'
 import { enqueueResolvedPlaylist, startSerialDownloads } from './downloads.service'
 
 function buildDumpArgs(url: string): string[] {
@@ -40,7 +44,8 @@ export async function loadYoutubePlaylistIntoDraft(): Promise<void> {
   playlistDraftStore.update((s) => ({ ...s, loading: true, error: null }))
 
   try {
-    const stdout = await spawnYtdlpCollectStdout(buildDumpArgs(url))
+    const cookieArg = await cookiesArgsForYtdlp(getDownloadsState().ytdlpCookiesPath)
+    const stdout = await spawnYtdlpCollectStdout([...cookieArg, ...buildDumpArgs(url)])
     let root: YtdlpDumpRoot
     try {
       root = JSON.parse(stdout) as YtdlpDumpRoot
