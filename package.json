@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "tauri": "tauri",
+    "fetch-sidecars": "node scripts/fetch-sidecars.mjs",
     "download-playlist": "node scripts/download-playlist.mjs"
   },
   "devDependencies": {

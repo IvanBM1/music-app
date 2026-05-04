@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies & frontend build
 node_modules
 dist
 dist-ssr
@@ -23,9 +24,17 @@ dist-ssr
 *.sln
 *.sw?
 
-# Tauri / Rust build output
+# TypeScript / tooling
+*.tsbuildinfo
+.eslintcache
+
+# Tauri / Rust
 src-tauri/target/
 
-# Sidecar binaries (ffmpeg, ffprobe, yt-dlp). Too large for GitHub (>100 MB).
-# Place them locally under src-tauri/bin/ before `npm run tauri build`; see project docs.
+# Sidecars (ffmpeg, ffprobe, yt-dlp): no versionar; CI y `npm run fetch-sidecars` los generan.
 src-tauri/bin/
+
+# Descargas temporales del script de sidecars
+node_modules/.sidecars-tmp/
+node_modules/.sc-*/
+

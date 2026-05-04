@@ -1,0 +1,110 @@
+# Builds desktop Tauri 2 + Svelte (macOS Apple Silicon / Windows x64 en los runners por defecto).
+# Sidecars: yt-dlp, ffmpeg, ffprobe (nombres según triple de rustc, alineado con bundle.externalBin).
+
+name: Desktop (Tauri)
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-desktop:
+    name: Build (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macos
+          - os: windows-latest
+            label: windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Fetch sidecars (ffmpeg, ffprobe, yt-dlp)
+        shell: bash
+        run: node scripts/fetch-sidecars.mjs
+
+      - name: Show rustc host and bin layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc -vV | sed -n 's/^host: /rustc host: /p'
+          echo "--- src-tauri/bin ---"
+          ls -la src-tauri/bin
+
+      - name: Build Tauri (release)
+        run: npm run tauri build
+        env:
+          CI: true
+
+      - name: Verify sidecars inside bundle
+        shell: bash
+        run: node scripts/fetch-sidecars.mjs --verify-bundle
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-app-${{ matrix.label }}
+          path: src-tauri/target/release/bundle
+          if-no-files-found: error
+
+  github-release:
+    name: Publish release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: music-app-*
+          merge-multiple: true
+
+      - name: List files for release
+        run: find release-assets -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+          files: |
+            release-assets/dmg/**/*.dmg
+            release-assets/msi/**/*.msi
+            release-assets/nsis/**/*.exe
