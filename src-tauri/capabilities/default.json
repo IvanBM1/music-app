@@ -1,0 +1,151 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        { "path": "$DOWNLOAD/music-app" },
+        { "path": "$DOWNLOAD/music-app/**" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview/**" },
+        { "path": "$HOME/Downloads/music-app" },
+        { "path": "$HOME/Downloads/music-app/**" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$DOWNLOAD/music-app" },
+        { "path": "$DOWNLOAD/music-app/**" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview/**" },
+        { "path": "$HOME/Downloads/music-app" },
+        { "path": "$HOME/Downloads/music-app/**" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$HOME/Downloads/**" },
+        { "path": "$DOWNLOAD/music-app" },
+        { "path": "$DOWNLOAD/music-app/**" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview/**" },
+        { "path": "$HOME/Downloads/music-app" },
+        { "path": "$HOME/Downloads/music-app/**" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$DOWNLOAD/music-app" },
+        { "path": "$DOWNLOAD/music-app/**" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview/**" },
+        { "path": "$HOME/Downloads/music-app" },
+        { "path": "$HOME/Downloads/music-app/**" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": [
+        { "path": "$DOWNLOAD/music-app" },
+        { "path": "$DOWNLOAD/music-app/**" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview" },
+        { "path": "$DOWNLOAD/music-app/.audio-preview/**" },
+        { "path": "$HOME/Downloads/music-app" },
+        { "path": "$HOME/Downloads/music-app/**" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview" },
+        { "path": "$HOME/Downloads/music-app/.audio-preview/**" }
+      ]
+    },
+    "shell:default",
+    "notification:default",
+    "store:default",
+    "os:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "bin/yt-dlp",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffmpeg",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffprobe",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "bin/yt-dlp",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffmpeg",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffprobe",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-kill",
+      "allow": [
+        {
+          "name": "bin/yt-dlp",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffmpeg",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/ffprobe",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
+  ]
+}

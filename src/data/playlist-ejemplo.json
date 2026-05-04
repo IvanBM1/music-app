@@ -1,0 +1,86 @@
+{
+  "playlist": "playlist-ejemplo",
+  "out": "music-app",
+  "tracks": [
+    {
+      "fileName": "HARAGAN Y CIA Morir de noche.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 1,
+      "title": "HARAGAN Y CIA Morir de noche",
+      "videoUrl": "https://www.youtube.com/watch?v=2HMCe2THeGk"
+    },
+    {
+      "fileName": "Recuerdos de El haragán y Cia.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 2,
+      "title": "Recuerdos de El haragán y Cia",
+      "videoUrl": "https://www.youtube.com/watch?v=jKbzGDujxvs"
+    },
+    {
+      "fileName": "El No Lo Mató ft. Alex Lora.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 3,
+      "title": "El No Lo Mató ft. Alex Lora",
+      "videoUrl": "https://www.youtube.com/watch?v=3yMn1EcZr4c"
+    },
+    {
+      "fileName": "Quiero Cambiar.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 4,
+      "title": "Quiero Cambiar",
+      "videoUrl": "https://www.youtube.com/watch?v=wO_KbGUTV2Q"
+    },
+    {
+      "fileName": "El Chamuco.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 5,
+      "title": "El Chamuco",
+      "videoUrl": "https://www.youtube.com/watch?v=Jz91XwqzbPg"
+    },
+    {
+      "fileName": "María.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 6,
+      "title": "María",
+      "videoUrl": "https://www.youtube.com/watch?v=S8RTwjXso6g"
+    },
+    {
+      "fileName": "En El Corazón No Hay Nada.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 7,
+      "title": "En El Corazón No Hay Nada",
+      "videoUrl": "https://www.youtube.com/watch?v=6aqsB0NDkBU"
+    },
+    {
+      "fileName": "Unknown.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 8,
+      "title": "Unknown",
+      "videoUrl": "https://www.youtube.com/watch?v=4YzXwfyNQ34"
+    },
+    {
+      "fileName": "LIRAN ROLL.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 9,
+      "title": "LIRAN ROLL",
+      "videoUrl": "https://www.youtube.com/watch?v=HmAQIudqQ0I"
+    },
+    {
+      "fileName": "Unknown 2.mp3",
+      "artist": "El Haragán y Cía",
+      "album": "Rock nacional (demo)",
+      "trackNumber": 10,
+      "title": "Unknown 2",
+      "videoUrl": "https://www.youtube.com/watch?v=btzeSa89gsg"
+    }
+  ]
+}
