@@ -98,6 +98,16 @@ export function removeDownloadTasksByDraftId(draftId: string): void {
   }))
 }
 
+/** Quita todas las tareas cuyo `draftId` está en la lista (p. ej. al vaciar el borrador). */
+export function removeDownloadTasksForDraftIds(draftIds: readonly string[]): void {
+  if (draftIds.length === 0) return
+  const set = new Set(draftIds)
+  downloadsStore.update((s) => ({
+    ...s,
+    tasks: s.tasks.filter((t) => !t.draftId || !set.has(t.draftId))
+  }))
+}
+
 export function appendStructuredLog(scope: string, message: string): void {
   const stamp = new Date().toISOString()
   const line = `[${stamp}][${scope}] ${message}`

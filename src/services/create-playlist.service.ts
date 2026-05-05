@@ -1,13 +1,13 @@
 import { get } from 'svelte/store'
 import { open } from '@tauri-apps/plugin-dialog'
 import { downloadDir, join } from '@tauri-apps/api/path'
-import {
-  appendStructuredLog,
-  getDownloadsState,
-  replaceDownloadTasks
-} from '../stores/downloads.store'
+import { appendStructuredLog, getDownloadsState } from '../stores/downloads.store'
 import type { PlaylistJsonRoot, PlaylistTrack } from '../lib/types/playlist.types'
-import { playlistDraftStore, type DraftTrack } from '../stores/playlist-draft.store'
+import {
+  playlistDraftStore,
+  renumberDraftTracks,
+  type DraftTrack
+} from '../stores/playlist-draft.store'
 import {
   buildTracksFromDump,
   collectEntries,
@@ -41,6 +41,20 @@ export async function loadYoutubePlaylistIntoDraft(): Promise<void> {
     return
   }
 
+  const rawLimit = st.listFetchLimit.trim()
+  let maxEntries: number | null = null
+  if (rawLimit !== '') {
+    const n = Number.parseInt(rawLimit, 10)
+    if (!Number.isFinite(n) || n < 1) {
+      playlistDraftStore.update((s) => ({
+        ...s,
+        error: 'El límite debe ser un número entero mayor que cero (o déjalo vacío para cargar todo).'
+      }))
+      return
+    }
+    maxEntries = n
+  }
+
   playlistDraftStore.update((s) => ({ ...s, loading: true, error: null }))
 
   try {
@@ -54,31 +68,37 @@ export async function loadYoutubePlaylistIntoDraft(): Promise<void> {
       throw new Error(`Could not parse yt-dlp JSON: ${msg}\n${stdout.slice(0, 500)}`)
     }
 
-    const entries = collectEntries(root)
+    let entries = collectEntries(root)
     if (entries.length === 0) {
       throw new Error('No videos found for that URL.')
+    }
+    if (maxEntries != null) {
+      entries = entries.slice(0, maxEntries)
     }
 
     const built = buildTracksFromDump(root, entries)
     const label = playlistLabelFromDump(root)
-    const tracks: DraftTrack[] = built.map((t) => ({ ...t, draftId: crypto.randomUUID() }))
+    const newTracks: DraftTrack[] = built.map((t) => ({ ...t, draftId: crypto.randomUUID() }))
+    const priorTracks = get(playlistDraftStore).tracks
+    const merged = renumberDraftTracks([...priorTracks, ...newTracks])
 
     playlistDraftStore.update((s) => ({
       ...s,
       loading: false,
       playlistLabel: label,
       playlistName: s.playlistName.trim() ? s.playlistName : label,
-      tracks
+      tracks: merged
     }))
-    replaceDownloadTasks([])
-    appendStructuredLog('create-playlist', `Listado: ${tracks.length} vídeo(s) — ${label}`)
+    appendStructuredLog(
+      'create-playlist',
+      `Listado: +${newTracks.length} vídeo(s) (total borrador ${merged.length}) — ${label}`
+    )
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     playlistDraftStore.update((s) => ({
       ...s,
       loading: false,
-      error: msg,
-      tracks: []
+      error: msg
     }))
     appendStructuredLog('create-playlist', `Error: ${msg}`)
   }

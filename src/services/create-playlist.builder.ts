@@ -54,6 +54,34 @@ export function stripRedundantArtistFromTitle(title: string, artist: string): st
   return t
 }
 
+/** Normaliza para comparar título de vídeo con el canal / playlist (orden «canción - artista»). */
+function normForArtistCompare(s: string): string {
+  return stripParenthesesAndBrackets(String(s || ''))
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * YouTube suele usar «Artista - Canción» pero también «Canción - Artista».
+ * Si la parte que coincide con el canal/uploader es la derecha, intercambiamos.
+ */
+function orderDashParts(
+  left: string,
+  right: string,
+  fallbackArtist: string
+): { artist: string; title: string } {
+  const ch = String(fallbackArtist || '').trim()
+  if (ch.length >= 2 && !/^unknown$/i.test(ch)) {
+    const nl = normForArtistCompare(left)
+    const nr = normForArtistCompare(right)
+    const nc = normForArtistCompare(ch)
+    if (nr === nc) return { artist: right.trim(), title: left.trim() }
+    if (nl === nc) return { artist: left.trim(), title: right.trim() }
+  }
+  return { artist: left.trim(), title: right.trim() }
+}
+
 export function splitArtistTitle(
   rawTitle: string,
   fallbackArtist: string
@@ -63,12 +91,12 @@ export function splitArtistTitle(
 
   const dash = cleaned.match(/^(.{1,120}?)\s+-\s+(.+)$/)
   if (dash) {
-    return { artist: dash[1].trim(), title: dash[2].trim() }
+    return orderDashParts(dash[1], dash[2], fallback)
   }
 
   const unicodeDash = cleaned.match(/^(.{1,120}?)\s+[–—]\s+(.+)$/)
   if (unicodeDash) {
-    return { artist: unicodeDash[1].trim(), title: unicodeDash[2].trim() }
+    return orderDashParts(unicodeDash[1], unicodeDash[2], fallback)
   }
 
   const colon = cleaned.match(/^([^:]+):\s*(.+)$/)

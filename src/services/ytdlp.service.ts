@@ -61,7 +61,8 @@ export async function ytDlpPreambleArgs(cookiesPath: string | null | undefined):
 }
 
 /**
- * Construye argumentos con flags recomendados para audio MP3 embebido.
+ * Construye argumentos con flags recomendados para audio MP3.
+ * Sin `--embed-metadata`: los ID3 los aplica la app para evitar conflictos con título/artista.
  * @param leadingExtras p. ej. `await ytDlpPreambleArgs(...)` (cookies + Deno/EJS; va tras `--ffmpeg-location`).
  */
 export function buildYtdlpAudioArgs(
@@ -78,7 +79,6 @@ export function buildYtdlpAudioArgs(
     '--progress',
     '--no-playlist',
     '--restrict-filenames',
-    '--embed-metadata',
     '--embed-thumbnail',
     '-x',
     '--audio-format',

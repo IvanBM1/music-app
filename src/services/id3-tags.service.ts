@@ -27,7 +27,6 @@ function buildImageTag(coverAbsolutePath: string, imageBytes: Uint8Array): NonNu
 
 /**
  * Aplica metadatos ID3 al MP3 (equivalente a `applyTags` del script Node).
- * Requiere `artist` en la tarea (p. ej. importación desde playlist JSON).
  */
 export async function applyId3TagsToTaskFile(
   playlistDir: string,
@@ -36,10 +35,6 @@ export async function applyId3TagsToTaskFile(
   rootCoverPath: string,
   coverAbsolutePath?: string | null
 ): Promise<void> {
-  if (!task.artist?.trim()) {
-    return
-  }
-
   const mp3Path = await join(playlistDir, task.fileName)
   let fileBytes: Uint8Array
   try {
@@ -60,8 +55,8 @@ export async function applyId3TagsToTaskFile(
 
   const tags: Id3Tags = {
     ...kept,
-    title: task.title,
-    artist: task.artist,
+    title: task.title?.trim() || 'Unknown',
+    artist: task.artist?.trim() ?? '',
     album: task.album ?? '',
     trackNumber: String(task.trackNumber ?? ''),
     comment: {

@@ -1,14 +1,18 @@
 <script lang="ts">
   import type { DownloadTask } from './lib/types/downloads.types'
-  import { downloadsStore, removeDownloadTasksByDraftId } from './stores/downloads.store'
+  import { get } from 'svelte/store'
+  import {
+    downloadsStore,
+    removeDownloadTasksByDraftId,
+    removeDownloadTasksForDraftIds
+  } from './stores/downloads.store'
   import {
     clearDraftCoverImage,
+    clearDraftTracksList,
     playlistDraftStore,
     removeDraftTrackById
   } from './stores/playlist-draft.store'
   import {
-    clearYtdlpCookiesFile,
-    pickYtdlpCookiesFile,
     requestCancelDownloads
   } from './services/downloads.service'
   import {
@@ -25,6 +29,7 @@
   import { youtubeEmbedPlayerUrl, youtubeVideoId } from './lib/youtube-url'
   import Button from './components/Button.svelte'
   import ListPlus from 'lucide-svelte/icons/list-plus'
+  import ListX from 'lucide-svelte/icons/list-x'
   import Download from 'lucide-svelte/icons/download'
   import Square from 'lucide-svelte/icons/square'
   import MonitorPlay from 'lucide-svelte/icons/monitor-play'
@@ -35,7 +40,6 @@
   import { isTauri } from '@tauri-apps/api/core'
   import { readFile } from '@tauri-apps/plugin-fs'
 
-  /** `blob:` URL para la miniatura; `convertFileSrc` puede no ser válido en el webview sin asset protocol. */
   let coverPreviewObjectUrl = $state<string | null>(null)
 
   function coverMimeFromPath(filePath: string): string {
@@ -94,6 +98,12 @@
     removeDraftTrackById(draftId)
   }
 
+  function clearDraftList() {
+    const ids = get(playlistDraftStore).tracks.map((t) => t.draftId)
+    removeDownloadTasksForDraftIds(ids)
+    clearDraftTracksList()
+  }
+
   function runDownloads() {
     void downloadPlaylistFromDraft()
   }
@@ -108,23 +118,15 @@
     playlistDraftStore.update((s) => ({ ...s, playlistName: v }))
   }
 
+  function updateListFetchLimit(ev: Event) {
+    const v = (ev.currentTarget as HTMLInputElement).value
+    playlistDraftStore.update((s) => ({ ...s, listFetchLimit: v }))
+  }
+
   function coverBasename(path: string | null): string {
     if (!path?.trim()) return ''
     const parts = path.replace(/\\/g, '/').split('/')
     return parts.pop() ?? path
-  }
-
-  function cookiesPathLabel(path: string | null): string {
-    if (!path?.trim()) return 'Ninguna — sin cookies de navegador'
-    return coverBasename(path)
-  }
-
-  async function pickYtdlpCookies() {
-    await pickYtdlpCookiesFile()
-  }
-
-  async function clearYtdlpCookies() {
-    await clearYtdlpCookiesFile()
   }
 
   function fetchYoutubeList() {
@@ -168,7 +170,6 @@
     return 'is-active'
   }
 
-  /** Progreso del lote: cada pista pesa 1/n; la activa suma su % de yt-dlp. */
   const globalDownload = $derived.by(() => {
     const { tasks, isProcessing, activeTaskId } = $downloadsStore
     if (!isProcessing || tasks.length === 0) {
@@ -269,56 +270,20 @@
               autocomplete="off"
             />
           </label>
-
-          {#if isTauri()}
-            <div class="field">
-              <span class="field-label">Cookies de YouTube (opcional)</span>
-              <p class="field-hint">
-                Si aparece el aviso de «bot» o inicio de sesión, exporta cookies en formato Netscape y elige el
-                archivo. Guía:
-                <a
-                  class="field-hint-link"
-                  href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
-                  target="_blank"
-                  rel="noopener noreferrer">yt-dlp — cookies</a
-                >. Los retos JavaScript de YouTube requieren
-                <a
-                  class="field-hint-link"
-                  href="https://github.com/yt-dlp/yt-dlp/wiki/EJS"
-                  target="_blank"
-                  rel="noopener noreferrer">Deno (EJS)</a
-                >: la app lo empaqueta si ejecutas <code class="field-hint-code">npm run fetch-sidecars</code> antes del
-                build (o usas el workflow de CI).
-              </p>
-              <div class="cookies-row">
-                <span
-                  class="cookies-path"
-                  title={$downloadsStore.ytdlpCookiesPath ?? ''}
-                >{cookiesPathLabel($downloadsStore.ytdlpCookiesPath)}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onclick={() => void pickYtdlpCookies()}
-                  disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
-                >
-                  Elegir archivo…
-                </Button>
-                {#if $downloadsStore.ytdlpCookiesPath}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onclick={() => void clearYtdlpCookies()}
-                    disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
-                  >
-                    Quitar
-                  </Button>
-                {/if}
-              </div>
-            </div>
-          {/if}
-
+          <label class="field">
+            <span class="field-label">Límite de vídeos</span>
+            <input
+              type="text"
+              inputmode="numeric"
+              class="field-input"
+              placeholder="Vacío = cargar toda la lista"
+              value={$playlistDraftStore.listFetchLimit}
+              oninput={updateListFetchLimit}
+              disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
+              autocomplete="off"
+              aria-describedby="hint-fetch-limit"
+            />
+          </label>
           <Button
             variant="outline"
             class="action-full"
@@ -487,7 +452,22 @@
         <section class="queue-block" aria-labelledby="queue-heading">
           <div class="queue-head">
             <h2 id="queue-heading" class="queue-title">Cola de descarga</h2>
-            <span class="queue-count">{queueCount($playlistDraftStore.tracks.length)}</span>
+            <div class="queue-head-right">
+              <span class="queue-count">{queueCount($playlistDraftStore.tracks.length)}</span>
+              {#if $playlistDraftStore.tracks.length > 0}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  icon={ListX}
+                  onclick={clearDraftList}
+                  disabled={$playlistDraftStore.loading || $downloadsStore.isProcessing}
+                  title="Vaciar el borrador y quitar tareas asociadas de la cola"
+                >
+                  Limpiar lista
+                </Button>
+              {/if}
+            </div>
           </div>
 
           {#if $playlistDraftStore.tracks.length === 0}
@@ -1042,10 +1022,17 @@
 
   .queue-head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 0.65rem;
+  }
+
+  .queue-head-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   .queue-title {

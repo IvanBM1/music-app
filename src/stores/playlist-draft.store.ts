@@ -7,6 +7,8 @@ export interface DraftTrack extends PlaylistTrack {
 
 export interface PlaylistDraftState {
   sourceUrl: string
+  /** Si está vacío, se cargan todos los vídeos; si es un número > 0, máximo de entradas. */
+  listFetchLimit: string
   /** Nombre elegido por el usuario (carpeta + álbum ID3). */
   playlistName: string
   /** Título devuelto por yt-dlp (referencia). */
@@ -20,6 +22,7 @@ export interface PlaylistDraftState {
 
 const initial: PlaylistDraftState = {
   sourceUrl: '',
+  listFetchLimit: '',
   playlistName: '',
   playlistLabel: '',
   coverImagePath: null,
@@ -34,7 +37,19 @@ export function resetPlaylistDraft(): void {
   playlistDraftStore.set({ ...initial })
 }
 
-function renumberDraftTracks(tracks: DraftTrack[]): DraftTrack[] {
+/** Vacía el borrador de pistas (nombre/etiqueta de playlist incluidos); no borra URL ni límite ni portada. */
+export function clearDraftTracksList(): void {
+  playlistDraftStore.update((s) => ({
+    ...s,
+    tracks: [],
+    error: null,
+    playlistName: '',
+    playlistLabel: ''
+  }))
+}
+
+/** Renumera `trackNumber` tras añadir o quitar filas. */
+export function renumberDraftTracks(tracks: DraftTrack[]): DraftTrack[] {
   const n = tracks.length
   return tracks.map((t, i) => ({
     ...t,
